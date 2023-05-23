@@ -1,0 +1,39 @@
+{
+	"name": "amp-rip-replace",
+	"version": "1.0",
+	"description": "cloud style R&R",
+	"main": "index.js",
+	"scripts": {
+		"scratch": "nodemon --inspect -i ./tmp -i ./testData scratch.js",
+		"prune": "rm -rf ./tmp/*",
+		"post": "npm publish",
+		"deploy": "gcloud functions deploy amp-rip-replace --gen2 --region=us-east1 --runtime=nodejs16 --source=. --entry-point=start --memory=8G --trigger-topic=snowcat-amplitude --timeout=540 --max-instances=20 --min-instances=0 --retry",
+		"local": "functions-framework --port=3000 --target=start --signature-type=http",
+		"test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
+	},
+	"bin": {
+		"amp-ext": "./index.js"
+	},
+	"types": "./types.d.ts",
+	"type": "module",
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@google-cloud/functions-framework": "^3.2.0",
+		"@google-cloud/logging-bunyan": "^4.2.2",
+		"@google-cloud/storage": "^6.10.1",
+		"ak-tools": "^1.0.322",
+		"bunyan": "^1.8.15",
+		"dayjs": "^1.11.7",
+		"jest": "^29.5.0",
+		"lzo": "^0.4.11",
+		"md5": "^2.3.0",
+		"mixpanel-import": "^2.3.8",
+		"unzip-stream": "^0.3.1"
+	},
+	"devDependencies": {
+		"dotenv": "^16.0.3",
+		"nodemon": "^2.0.22"
+	}
+}

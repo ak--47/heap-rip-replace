@@ -1,0 +1,8 @@
+scratch.js
+tmp/*
+!tmp/.gitkeep
+.DS_Store
+.vscode
+node_modules
+.env
+testData/*
