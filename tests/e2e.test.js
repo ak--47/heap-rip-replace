@@ -17,8 +17,7 @@ const MP_SECRET = process.env.MP_SECRET;
 /** @type {Config} */
 const CONFIG = {
 	bucket: "foo",
-	type: 'event',
-	filePath: './testData/heap-events-ex.json',
+	
 	region: 'US',
 	id: "2337",
 	name: "HEAP RIP!",
@@ -38,22 +37,22 @@ describe('do tests work?', () => {
 });
 
 
-// describe('e2e', () => {
-// 	test('events', async () => {
-// 		const { success, failed } = await main({...CONFIG, type: "event"}, true);
-// 		expect(success).toBe(10000);
-// 		expect(failed).toBe(0);
+describe('e2e', () => {
+	test('events', async () => {
+		const { success, failed } = await main({...CONFIG, type: "event", filePath: './testData/heap-events-ex.json'}, true);
+		expect(success).toBe(10000);
+		expect(failed).toBe(0);
 
-// 	}, timeout);
+	}, timeout);
 
-// 	test('users', async () => {
-// 		const { success, failed } = await main({...CONFIG, type: "user"}, true);
-// 		expect(success).toBe(4998);
-// 		expect(failed).toBe(0);
+	test('users', async () => {
+		const { success, failed } = await main({...CONFIG, type: "user", filePath: './testData/heap-users-ex.json',}, true);
+		expect(success).toBe(4998);
+		expect(failed).toBe(0);
 
-// 	}, timeout);
+	}, timeout);
 
-// });
+});
 
 
 
