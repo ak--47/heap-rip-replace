@@ -7,8 +7,8 @@
 		"scratch": "nodemon --inspect -i ./tmp -i ./testData scratch.js",
 		"prune": "rm -rf ./tmp/*",
 		"post": "npm publish",
-		"deploy": "gcloud functions deploy heap-rip-replace --gen2 --region=us-east1 --runtime=nodejs16 --source=. --entry-point=start --memory=8G --trigger-topic=snowcat-heap --timeout=540 --max-instances=20 --min-instances=0",
-		"local": "functions-framework --port=3000 --target=start --signature-type=http",
+		"deploy": "gcloud functions deploy heap-rip-replace --gen2 --region=us-east1 --runtime=nodejs16 --source=. --entry-point=pubsub --memory=8G --trigger-topic=snowcat-heap --timeout=540 --max-instances=5 --min-instances=0",
+		"local": "functions-framework --port=3000 --target=url --signature-type=http",
 		"test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
 	},
 	"bin": {

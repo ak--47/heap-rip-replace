@@ -5,7 +5,7 @@ testData
 tests
 tmp
 .gitignore
-.gitattributions
+.gitattributes
 jsconfig.json
 scratch.js
 types.d.ts

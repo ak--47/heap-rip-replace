@@ -35,28 +35,38 @@ CLOUD ENTRY POINT
 ----
 */
 
-functions.cloudEvent("start", async cloudEvent => {
-	/** @type {Config}  */
-	//@ts-ignore
-	const config = JSON.parse(Buffer.from(cloudEvent.data.message.data, "base64").toString());
-	const logLabel = `${config?.name || "unnamed"} | ${config?.project || ""} | ${path.basename(config.filePath)}`;
+functions.cloudEvent("pubsub", async cloudEvent => {
+	return await cloudRun(cloudEvent);
+});
+
+functions.http("url", async (req, res) => {
+	const { body } = req;
+	const receipt = await cloudRun(body, false);
+	res.send(receipt);
+});
+
+async function cloudRun(cloudEvent, isPubSub = true) {
+	let config;
+	if (isPubSub) config = JSON.parse(Buffer.from(cloudEvent.data.message.data, "base64").toString());
+	if (!isPubSub) config = cloudEvent;
+	const logLabel = `${path.basename(config.filePath)} →  ${config?.project || "no project"} (${config?.name || "no name"})`;
 	const timer = u.time("ETL");
 	timer.start();
-	log.info(config, `START: ${logLabel}`);
+	log.info({ config, labels: { directive: "START" } }, `${logLabel}`);
 
 	try {
-		const receipt = await main(config, false);
+		const receipt = await main(config);
 		timer.stop(false);
 		const duration = timer.report(false).human;
-		log.info({ results: receipt, ...config }, `SUCCESS: ${logLabel} | ${duration}`);
+		log.info({ results: receipt, config, labels: { directive: "DONE" } }, `${logLabel} | ${duration}`);
 		return receipt;
 	} catch (error) {
 		timer.stop(false);
 		const duration = timer.report(false).human;
-		log.error({ error: error, ...config }, `FAILURE: ${error.message} | ${logLabel} | ${duration}`);
+		log.error({ error: error, config, labels: { directive: "FAIL" } }, `${error.message} | ${logLabel} | ${duration}`);
 		throw error;
 	}
-});
+}
 
 /*
 ----
@@ -154,6 +164,7 @@ async function main(config, isLocal = false) {
 			break;
 	}
 
+	// @ts-ignore
 	const dataImport = await mp(mpCreds, importPath, options);
 
 	if (cleanup) {
@@ -212,19 +223,17 @@ const heapMpPairs = [
 
 function heapEventsToMp(heapEvent) {
 	const insert_id = md5(JSON.stringify(heapEvent));
-	//distinct_id
-	const anonId = heapEvent.id.split(",")[1].replace(")", ""); //ex: { "id": "(2008543124,4810060720600030)"}
-	const userId = heapEvent.identity;
-	const distinct_id = userId || anonId;
+
+	//some heap events have user_id, some have a weird tuple
+	const anon_id = heapEvent?.id?.split(",")?.[1]?.replace(")", ""); //ex: { "id": "(2008543124,4810060720600030)"} ... first # is project_id
+	const device_id = heapEvent.user_id || anon_id;
+	if (!device_id) return {};
 
 	// event name
 	const eventName = heapEvent.type || heapEvent.object || `unknown`;
 
 	// time
 	const time = dayjs.utc(heapEvent.time).valueOf();
-	delete heapEvent.object;
-	delete heapEvent.type;
-	delete heapEvent.id;
 	delete heapEvent.time;
 
 	// props
@@ -235,7 +244,7 @@ function heapEventsToMp(heapEvent) {
 	const mixpanelEvent = {
 		event: eventName,
 		properties: {
-			distinct_id,
+			$device_id: device_id,
 			time,
 			$insert_id: insert_id,
 			$source: `heap-to-mixpanel`
@@ -245,7 +254,7 @@ function heapEventsToMp(heapEvent) {
 	//get all custom props + group props + user props
 	mixpanelEvent.properties = { ...heapEvent, ...customProps, ...mixpanelEvent.properties };
 
-	//relabel
+	//relabel for default pairing
 	for (let heapMpPair of heapMpPairs) {
 		if (mixpanelEvent.properties[heapMpPair[0]]) {
 			mixpanelEvent.properties[heapMpPair[1]] = mixpanelEvent.properties[heapMpPair[0]];
@@ -253,6 +262,13 @@ function heapEventsToMp(heapEvent) {
 		}
 	}
 
+	// if the event has an identity prop, it's a heap $identify event, so send $user_id too
+	if (heapEvent.identity) {
+		mixpanelEvent.event = "$identify";
+		const knownId = heapEvent.identity;
+		mixpanelEvent.properties.$device_id = device_id;
+		mixpanelEvent.properties.$user_id = knownId;
+	}
 
 	return mixpanelEvent;
 
