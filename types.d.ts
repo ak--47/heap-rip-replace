@@ -30,7 +30,7 @@ interface Config {
     /**
      * streaming watermark
      */
-	type: 'event' | 'user' | 'group';
+	type: 'event' | 'user' | 'group' | 'identity';
     /**
      * streaming watermark
      */

@@ -49,7 +49,7 @@ async function cloudRun(cloudEvent, isPubSub = true) {
 	let config;
 	if (isPubSub) config = JSON.parse(Buffer.from(cloudEvent.data.message.data, "base64").toString());
 	if (!isPubSub) config = cloudEvent;
-	const logLabel = `${path.basename(config.filePath)} →  ${config?.project || "no project"} (${config?.name || "no name"})`;
+	const logLabel = `${path.basename(config.filePath)} →  PID: ${config?.project || "no project"} (${config?.type || "no type"})`;
 	const timer = u.time("ETL");
 	timer.start();
 	log.info({ config, labels: { directive: "START" } }, `${logLabel}`);
@@ -131,10 +131,20 @@ async function main(config, isLocal = false) {
 
 	/** @type {import('mixpanel-import').Options} */
 	const optionsUsers = {
+		...commonOptions,
 		recordType: "user",
 		fixData: true,
 		//@ts-ignore
 		transformFunc: heapUserToMp,
+
+	};
+
+	/** @type {import('mixpanel-import').Options} */
+	const optsUsersAnonIds = {
+		recordType: "user",
+		fixData: true,
+		//@ts-ignore
+		transformFunc: appendHeapUserIdsToMp,
 		...commonOptions
 	};
 
@@ -159,6 +169,8 @@ async function main(config, isLocal = false) {
 		case "group":
 			options = optionsGroup;
 			break;
+		case "identity":
+		//todo ... need hashmap of user profiles
 		default:
 			throw `unknown type: ${type}`;
 			break;
@@ -166,6 +178,7 @@ async function main(config, isLocal = false) {
 
 	// @ts-ignore
 	const dataImport = await mp(mpCreds, importPath, options);
+	if (type === "user") dataImport.secondImport = await mp(mpCreds, importPath, optsUsersAnonIds);
 
 	if (cleanup) {
 		await u.rm(importPath);
@@ -262,9 +275,10 @@ function heapEventsToMp(heapEvent) {
 		}
 	}
 
+	//todo not sure this is right
 	// if the event has an identity prop, it's a heap $identify event, so send $user_id too
 	if (heapEvent.identity) {
-		mixpanelEvent.event = "$identify";
+		mixpanelEvent.event = "identity association";
 		const knownId = heapEvent.identity;
 		mixpanelEvent.properties.$device_id = device_id;
 		mixpanelEvent.properties.$user_id = knownId;
@@ -275,13 +289,12 @@ function heapEventsToMp(heapEvent) {
 }
 
 function heapUserToMp(heapUser) {
+	//todo... users might have multiple identities
 	//distinct_id
 	const anonId = heapUser.id.split(",")[1].replace(")", "");
 	const userId = heapUser.identity;
 	if (!userId) return {};
-	delete heapUser.id;
-	delete heapUser.identity;
-	heapUser.anonymous_heap_uuid = anonId;
+	// heapUser.anonymous_heap_uuid = anonId;
 
 	// timestamps
 	if (heapUser.last_modified) heapUser.last_modified = dayjs.utc(heapUser.last_modified).toISOString();
@@ -309,6 +322,18 @@ function heapUserToMp(heapUser) {
 	}
 
 
+	return mixpanelProfile;
+}
+
+function appendHeapUserIdsToMp(heapUser) {
+	const anonId = heapUser.id.split(",")[1].replace(")", "");
+	const userId = heapUser.identity;
+	if (!userId) return {};
+
+	const mixpanelProfile = {
+		$distinct_id: userId || anonId,
+		$union: { anon_heap_ids: [anonId] }
+	};
 	return mixpanelProfile;
 }
 
