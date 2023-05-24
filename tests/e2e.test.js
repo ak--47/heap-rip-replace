@@ -16,8 +16,6 @@ const MP_SECRET = process.env.MP_SECRET;
 
 /** @type {Config} */
 const CONFIG = {
-	bucket: "foo",
-	
 	region: 'US',
 	id: "2337",
 	name: "HEAP RIP!",

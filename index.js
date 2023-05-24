@@ -39,7 +39,7 @@ functions.cloudEvent("start", async cloudEvent => {
 	/** @type {Config}  */
 	//@ts-ignore
 	const config = JSON.parse(Buffer.from(cloudEvent.data.message.data, "base64").toString());
-	const logLabel = `${config?.name || ""} | ${config?.project || ""} | ${path.basename(config.filePath)}`;
+	const logLabel = `${config?.name || "unnamed"} | ${config?.project || ""} | ${path.basename(config.filePath)}`;
 	const timer = u.time("ETL");
 	timer.start();
 	log.info(config, `START: ${logLabel}`);
@@ -53,7 +53,7 @@ functions.cloudEvent("start", async cloudEvent => {
 	} catch (error) {
 		timer.stop(false);
 		const duration = timer.report(false).human;
-		log.error({ error: error, ...config }, `FAILURE: ${logLabel} | ${duration}`);
+		log.error({ error: error, ...config }, `FAILURE: ${error.message} | ${logLabel} | ${duration}`);
 		throw error;
 	}
 });
@@ -65,29 +65,31 @@ MAIN
 */
 
 /**
- * pulls data out of amplitude
+ * takes a heap export and imports it into mixpanel
  * @param  {Config} config
  */
 async function main(config, isLocal = false) {
+	const TEMP_FILE = `temp.jsonl`;
 	const TEMP_DIR = isLocal ? path.resolve("./tmp") : os.tmpdir();
-	const { bucket, id, name, filePath, region, verbose, type, cleanup = true } = config;
+	const { id, name, filePath, region, verbose = false, type, cleanup = true } = config;
 	const { project: mpProject, secret: mpSecret, token: mpToken } = config;
 
-	let file;
+	let importPath = path.join(TEMP_DIR, TEMP_FILE);
 	if (isLocal) {
 		const copy = await u.load(filePath);
-		await u.touch(path.join(TEMP_DIR, path.basename(filePath)), copy);
+		await u.touch(importPath, copy);
 	} else {
+		const { bucket, file } = parseGCSUri(filePath);
 		//load from cloud storage
 		const storage = new Storage();
 		const options = {
-			destination: TEMP_DIR
+			destination: importPath
 		};
 
-		// Downloads the file
-		await storage.bucket(bucket).file(filePath).download(options);
+		// Downloads the file locally
+		await storage.bucket(bucket).file(file).download(options);
 	}
-	file = path.join(TEMP_DIR, path.basename(filePath));
+
 
 	/** @type {import('mixpanel-import').Creds} */
 	const mpCreds = {
@@ -152,12 +154,12 @@ async function main(config, isLocal = false) {
 			break;
 	}
 
-	const dataImport = await mp(mpCreds, file, options);
+	const dataImport = await mp(mpCreds, importPath, options);
 
 	if (cleanup) {
-		await u.rm(file);
+		await u.rm(importPath);
 	}
-	
+
 	return dataImport;
 }
 
@@ -209,29 +211,39 @@ const heapMpPairs = [
 
 
 function heapEventsToMp(heapEvent) {
-	//todo
 	const insert_id = md5(JSON.stringify(heapEvent));
-	const eventName = heapEvent.type ||  heapEvent.object || `unknown`;
-	const distinct_id = heapEvent.user_id;
+	//distinct_id
+	const anonId = heapEvent.id.split(",")[1].replace(")", ""); //ex: { "id": "(2008543124,4810060720600030)"}
+	const userId = heapEvent.identity;
+	const distinct_id = userId || anonId;
+
+	// event name
+	const eventName = heapEvent.type || heapEvent.object || `unknown`;
+
+	// time
 	const time = dayjs.utc(heapEvent.time).valueOf();
 	delete heapEvent.object;
 	delete heapEvent.type;
-	delete heapEvent.user_id;
+	delete heapEvent.id;
 	delete heapEvent.time;
 
+	// props
+	const customProps = { ...heapEvent.properties };
+	delete heapEvent.properties;
+
 	//template
-		const mixpanelEvent = {
+	const mixpanelEvent = {
 		event: eventName,
 		properties: {
 			distinct_id,
 			time,
-			$insert_id: insert_id,			
+			$insert_id: insert_id,
 			$source: `heap-to-mixpanel`
 		}
 	};
 
 	//get all custom props + group props + user props
-	mixpanelEvent.properties = {...heapEvent, ...mixpanelEvent.properties };
+	mixpanelEvent.properties = { ...heapEvent, ...customProps, ...mixpanelEvent.properties };
 
 	//relabel
 	for (let heapMpPair of heapMpPairs) {
@@ -313,4 +325,17 @@ function validate(config) {
 	if (!token) throw `missing mixpanel token`;
 	if (!secret) throw `missing mixpanel secret`;
 	return;
+}
+
+function parseGCSUri(uri) {
+	// ? https://www.npmjs.com/package/google-cloud-storage-uri-parser
+	const REG_EXP = new RegExp("^gs://([^/]+)/(.+)$");
+	const bucket = uri.replace(REG_EXP, "$1");
+	const file = uri.replace(REG_EXP, "$2");
+	return {
+		uri,
+		bucket,
+		file
+	};
+
 }

@@ -1,2 +1,11 @@
 scratch.js
 .env
+.vscode
+testData
+tests
+tmp
+.gitignore
+.gitattributions
+jsconfig.json
+scratch.js
+types.d.ts

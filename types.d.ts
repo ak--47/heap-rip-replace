@@ -1,10 +1,6 @@
 interface Config {
-    /**
-     * bucket to look in
-     */
-    bucket: string;
 	/**
-     * path to cloud file
+     * path to cloud file or local files; gcs:// URIs are supported
      */
     filePath: string;
     /**
