@@ -31,11 +31,13 @@ interface Config {
      * streaming watermark
      */
 	type: 'event' | 'user' | 'group' | 'identity';
-    /**
-     * streaming watermark
-     */
-    highWaterMark?: number;
+	/**
+	 * use verbose logging (for local runs only)
+	 */
 	verbose?: boolean;
+	/**
+	 * delete files after processing (for local runs only)
+	 */
 	cleanup?: boolean;
 }
 

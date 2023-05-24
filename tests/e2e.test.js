@@ -50,6 +50,14 @@ describe('e2e', () => {
 
 	}, timeout);
 
+
+	test('identities', async () => {
+		const { success, failed } = await main({...CONFIG, type: "identity", filePath: './testData/heap-users-ex.json'}, true);
+		expect(success).toBe(1786);
+		expect(failed).toBe(0);
+
+	}, timeout);
+
 });
 
 

@@ -157,6 +157,25 @@ async function main(config, isLocal = false) {
 		...commonOptions
 	};
 
+	/** @type {import('mixpanel-import').Options} */
+	const optionsIdentityExport = {
+		recordType: "peopleExport",
+		where: path.resolve(`${TEMP_DIR}/profiles`),
+		...commonOptions
+	};
+
+	/** @type {import('mixpanel-import').Options} */
+	const optionsIdentityImport = {
+		...commonOptions,
+		recordType: "event",
+		//@ts-ignore
+		transformFunc: heapMpIdentityResolution,
+		streamFormat: "json"
+
+	};
+
+
+
 
 	let options;
 	switch (type) {
@@ -170,7 +189,13 @@ async function main(config, isLocal = false) {
 			options = optionsGroup;
 			break;
 		case "identity":
-		//todo ... need hashmap of user profiles
+			const folder = u.mkdir(path.resolve(`${TEMP_DIR}/profiles`));
+			// @ts-ignore
+			const exportedProfiles = await mp(mpCreds, {}, optionsIdentityExport);
+			// @ts-ignore
+			importPath = folder;
+			options = optionsIdentityImport;
+			break;
 		default:
 			throw `unknown type: ${type}`;
 			break;
@@ -178,6 +203,7 @@ async function main(config, isLocal = false) {
 
 	// @ts-ignore
 	const dataImport = await mp(mpCreds, importPath, options);
+	// @ts-ignore
 	if (type === "user") dataImport.secondImport = await mp(mpCreds, importPath, optsUsersAnonIds);
 
 	if (cleanup) {
@@ -199,6 +225,7 @@ export default main;
 TRANSFORMS
 ----
 */
+
 
 const heapMpPairs = [
 	//amp to mp default props
@@ -339,6 +366,25 @@ function appendHeapUserIdsToMp(heapUser) {
 
 function heapGroupToMp(heapEvent) {
 	//todo
+
+}
+
+function heapMpIdentityResolution(mpProfile) {
+	//todo need a way to explode multiple events here
+	if (mpProfile.$properties.anon_heap_ids) {
+		const event = {
+			event: "identity association",
+			properties: {
+				$device_id: mpProfile.$properties.anon_heap_ids[0],
+				$user_id: mpProfile.$distinct_id
+			}
+		};
+		return event;
+	}
+
+	else {
+		return {};
+	}
 
 }
 
