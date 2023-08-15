@@ -1,14 +1,39 @@
-interface Config {
+/**
+ * a module to import amplitude data into mixpanel
+ */
+export default async function main(config: Config): Promise<Results>;
+
+import { ImportResults, Options } from "mixpanel-import";
+import { Readable } from "stream";
+
+interface Results {
+    events: ImportResults;
+    users: ImportResults;
+    groups: {};
+}
+
+/**
+ * an object to store configuration params
+ */
+interface Config extends Options {
+    /**
+     * a directory containing UNCOMPRESSED amplitude event json
+     */
+    dir?: string;
+    /**
+     * a file containing UNCOMPRESSED amplitude event json
+     */
+    file?: string;
 	/**
-     * path to cloud file or local files; gcs:// URIs are supported
-     */
-    filePath: string;
+	 * a file stream of UNCOMPRESSED amplitude event json
+	 */
+	stream?: Readable;
     /**
-     * region for data residency
+     * mixpanel secret
      */
-    region: "US" | "EU";
+    secret: string;
     /**
-     * mixpanel project
+     * mixpanel project id
      */
     project: number | string;
     /**
@@ -16,29 +41,49 @@ interface Config {
      */
     token: string;
     /**
-     * mixpanel secret
+     * use strict mode?
      */
-    secret: string;
+    strict?: boolean;
     /**
-     * job name (cloud only)
+     * a custom key to use for $user_id instead of amplitude default (user_id)
+     * see //? https://www.docs.developers.amplitude.com/analytics/apis/export-api/
      */
-    name: string;
+    custom_user_id?: string;
     /**
-     * job id (cloud only)
+     * US or EU residency
      */
-    id: string;
+    region?: "US" | "EU" | undefined;
     /**
-     * streaming watermark
+     * group keys (if applicable)
      */
-	type: 'event' | 'user' | 'group' | 'identity';
-	/**
-	 * use verbose logging (for local runs only)
-	 */
-	verbose?: boolean;
-	/**
-	 * delete files after processing (for local runs only)
-	 */
-	cleanup?: boolean;
+    group_keys?: string[];
+    /**
+     * verbosely log to the console
+     */
+    verbose?: boolean;
+    /**
+     * write logs to file
+     */
+    logs?: boolean;
+    /**
+     * type of data to import
+     */
+    type: 'event' | 'user' | 'group';    
+    /**
+     * rename prop keys
+     */
+    aliases?: Options["aliases"];
+    /**
+     * add arbitrary k:v pairs to records
+     */
+    tags?: Options["tags"];
+    [x: string]: unknown;
 }
 
-
+interface CustomTransformOptions {
+    /**
+     * a custom key to use for $user_id instead of amplitude default (user_id)
+     * see //? https://www.docs.developers.amplitude.com/analytics/apis/export-api/
+     */
+    custom_user_id?: string;
+}

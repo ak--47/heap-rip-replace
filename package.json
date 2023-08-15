@@ -1,39 +1,33 @@
 {
-	"name": "heap-rip-replace",
-	"version": "1.0",
-	"description": "cloud style R&R",
+	"name": "heap-to-mp",
+	"version": "1.01",
+	"description": "basic CLI for moving heap data to mixpanel",
 	"main": "index.js",
 	"scripts": {
 		"scratch": "nodemon --inspect -i ./tmp -i ./testData scratch.js",
 		"prune": "rm -rf ./tmp/*",
-		"post": "npm publish",
-		"deploy": "gcloud functions deploy heap-rip-replace --gen2 --region=us-east1 --runtime=nodejs16 --source=. --entry-point=pubsub --memory=8G --trigger-topic=snowcat-heap --timeout=540 --max-instances=5 --min-instances=0",
-		"local": "functions-framework --port=3000 --target=url --signature-type=http",
+		"post": "npm publish",		
 		"test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
 	},
 	"bin": {
-		"amp-ext": "./index.js"
+		"heap-to-mp": "./index.js"
 	},
 	"types": "./types.d.ts",
 	"type": "module",
 	"keywords": [],
-	"author": "",
+	"author": "AK",
 	"license": "ISC",
 	"dependencies": {
-		"@google-cloud/functions-framework": "^3.2.0",
-		"@google-cloud/logging-bunyan": "^4.2.2",
-		"@google-cloud/storage": "^6.10.1",
 		"ak-tools": "^1.0.322",
-		"bunyan": "^1.8.15",
 		"dayjs": "^1.11.7",
-		"jest": "^29.5.0",
-		"lzo": "^0.4.11",
+		"es-main": "^1.2.0",
 		"md5": "^2.3.0",
-		"mixpanel-import": "^2.3.9",
-		"unzip-stream": "^0.3.1"
+		"mixpanel-import": "^2.4.3",
+		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
 		"dotenv": "^16.0.3",
+		"jest": "^29.6.2",
 		"nodemon": "^2.0.22"
 	}
 }
