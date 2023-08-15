@@ -1,12 +1,14 @@
 # heap-to-mp
- take heap json files... bring them to mixpanel... (using simplified id merge)
+ this module will take in (uncompressed) heap raw json files, transform them, and send them to mixpanel.
 
-## tldr;
+ it is implemented as a CLI and requires [Node.js](https://nodejs.org/en/download).
+
+## usage:
 ```bash
 npx heap-to-mp --dir ./data --type event --token bar --secret qux --project 123
 ```
 
-### help
+### help / options
 ```bash
 npx heap-to-mp --help
 ```
