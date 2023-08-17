@@ -61,7 +61,7 @@ async function main(config) {
 
 	// device_id hash map
 	let device_id_map = null;
-	if (device_id_map_file) device_id_map = await buildDeviceIdMap(device_id_map_file);
+	if (device_id_map_file && type === 'event') device_id_map = await buildDeviceIdMap(device_id_map_file);
 	const transformOpts = { custom_user_id, device_id_map };
 
 
@@ -246,6 +246,13 @@ function cli() {
 			alias: 'epochEnd',
 			describe: 'don\'t import data after this timestamp (UNIX EPOCH)',
 			type: 'number'
+		})
+		.options("device_id_map", {
+			demandOption: false,
+			alias: 'id_map',
+			default: '',
+			describe: 'path to a file mapping device_id user_id',
+			type: 'string'
 		})
 		.help().argv;
 	/** @type {import('./types.d.ts').Config} */
