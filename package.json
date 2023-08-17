@@ -1,12 +1,12 @@
 {
 	"name": "heap-to-mp",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "basic CLI for moving heap data to mixpanel",
 	"main": "index.js",
 	"scripts": {
 		"scratch": "nodemon --inspect -i ./tmp -i ./testData scratch.js",
 		"prune": "rm -rf ./tmp/*",
-		"post": "npm publish",		
+		"post": "npm publish",
 		"test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
 	},
 	"bin": {
@@ -14,7 +14,7 @@
 	},
 	"types": "./types.d.ts",
 	"type": "module",
-	"keywords": [],
+	"keywords": ["mixpanel", "heap", "import", "cli"],
 	"author": "AK",
 	"license": "ISC",
 	"dependencies": {
@@ -22,7 +22,7 @@
 		"dayjs": "^1.11.7",
 		"es-main": "^1.2.0",
 		"md5": "^2.3.0",
-		"mixpanel-import": "^2.4.3",
+		"mixpanel-import": "^2.4.4",
 		"yargs": "^17.7.2"
 	},
 	"devDependencies": {

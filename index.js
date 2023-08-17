@@ -13,6 +13,15 @@ import yargs from "yargs";
 import { lstatSync } from "fs";
 const fileExt = ["json", "jsonl", "ndjson"];
 
+/**
+ * @typedef {Object<string, *>} StringKeyedObject
+ * An object with string keys and values of any type.
+ */
+
+/**
+ * @typedef {Array<StringKeyedObject>} arrObj
+ * An array of objects with string keys.
+ */
 
 
 /*
@@ -42,12 +51,18 @@ async function main(config) {
 		aliases = {},
 		tags = {},
 		stream = null,
+		device_id_map_file = null,
 		...otherOpts
 	} = config;
-	const transformOpts = { custom_user_id };
+
 	const l = log(verbose);
 	l("start!\n\nsettings:\n");
-	l({ project, dir, file, stream, secret, token, strict, region, verbose, logs, type, groups, custom_user_id, aliases, tags, ...otherOpts });
+	l({ project, dir, file, stream, secret, token, strict, region, verbose, logs, type, groups, custom_user_id, aliases, tags, device_id_map_file, ...otherOpts });
+
+	// device_id hash map
+	let device_id_map = null;
+	if (device_id_map_file) device_id_map = await buildDeviceIdMap(device_id_map_file);
+	const transformOpts = { custom_user_id, device_id_map };
 
 
 	/** @type {import('mixpanel-import').Creds} */
@@ -144,7 +159,7 @@ async function main(config) {
 
 	if (logs) {
 		await u.mkdir(path.resolve("./logs"));
-		await u.touch(path.resolve(`./logs/amplitude-import-log-${Date.now()}.json`), results, true);
+		await u.touch(path.resolve(`./logs/heap-import-log-${Date.now()}.json`), results, true);
 	}
 	l("\n\nfinish\n\n");
 
@@ -286,8 +301,7 @@ TRANSFORMS
 
 
 const heapMpPairs = [
-	//amp to mp default props
-	// ? https://developers.amplitude.com/docs/identify-api
+	//heap default to mp default props
 	// ? https://help.mixpanel.com/hc/en-us/articles/115004613766-Default-Properties-Collected-by-Mixpanel
 	["joindate", "$created"],
 	["initial_utm_term", "$initial_utm_term"],
@@ -311,6 +325,7 @@ const heapMpPairs = [
 	["initial_city", "$city"],
 	["initial_country", "$country_code"],
 	["email", "$email"],
+	["_email", "$email"],
 	["last_modified", "$last_seen"],
 	["Name", "$name"],
 	["city", "$city"],
@@ -319,13 +334,13 @@ const heapMpPairs = [
 ];
 
 function heapEventsToMp(options) {
-	const { custom_user_id = "" } = options;
+	const { custom_user_id = "", device_id_map = new Map() } = options;
 	return function transform(heapEvent) {
 		const insert_id = md5(JSON.stringify(heapEvent));
 
 		//some heap events have user_id, some have a weird tuple under id
 		const anon_id = heapEvent?.id?.split(",")?.[1]?.replace(")", ""); //ex: { "id": "(2008543124,4810060720600030)"} ... first # is project_id
-		const device_id = heapEvent.user_id || anon_id;
+		const device_id = heapEvent.user_id.toString() || anon_id.toString();
 		if (!device_id) return {};
 
 		// event name
@@ -360,13 +375,21 @@ function heapEventsToMp(options) {
 				delete mixpanelEvent.properties[heapMpPair[0]];
 			}
 		}
-		
+
 		// if the event has an identity prop, it's a heap $identify event, so set $user_id too
 		if (heapEvent.identity && !custom_user_id) {
 			mixpanelEvent.event = "identity association";
 			const knownId = heapEvent.identity.toString();
 			mixpanelEvent.properties.$device_id = device_id;
 			mixpanelEvent.properties.$user_id = knownId;
+		}
+
+		// if we have a device_id map, look up the device_id in the map and use the mapped value for $user_id
+		else if (device_id_map && !custom_user_id) {
+			const knownId = device_id_map.get(device_id) || null;
+			if (knownId) {
+				mixpanelEvent.properties.$user_id = knownId;
+			}
 		}
 
 		// use the custom user id if it exists on the event
@@ -434,6 +457,14 @@ function heapGroupToMp(heapEvent) {
 
 }
 
+async function buildDeviceIdMap(file) {
+	const data = /** @type {arrObj} */ (await u.load(file, true));
+	const hashmap = data.reduce((map, item) => {
+		map.set(item.id, item.distinct_id);
+		return map;
+	}, new Map());
+	return hashmap;
+}
 
 function appendHeapUserIdsToMp(heapUser) {
 	const anonId = heapUser.id.split(",")[1].replace(")", "");

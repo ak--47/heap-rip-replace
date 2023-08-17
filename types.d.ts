@@ -24,10 +24,10 @@ interface Config extends Options {
      * a file containing UNCOMPRESSED amplitude event json
      */
     file?: string;
-	/**
-	 * a file stream of UNCOMPRESSED amplitude event json
-	 */
-	stream?: Readable;
+    /**
+     * a file stream of UNCOMPRESSED amplitude event json
+     */
+    stream?: Readable;
     /**
      * mixpanel secret
      */
@@ -68,7 +68,7 @@ interface Config extends Options {
     /**
      * type of data to import
      */
-    type: 'event' | 'user' | 'group';    
+    type: "event" | "user" | "group";
     /**
      * rename prop keys
      */
@@ -77,8 +77,26 @@ interface Config extends Options {
      * add arbitrary k:v pairs to records
      */
     tags?: Options["tags"];
+    /**
+     * a local path to a file containing data of the form:
+     *
+     *  `{"distinct_id":"pli:191","id":"6198042366195748"}`
+     *
+     * where `distinct_id` is `$user_id` and `id` is `$device_id`
+     *
+     *
+     * if provided, this will be used to map $device_id to $user_id
+	 * 
+	 * for help generating this file, see: get-device-user-map.js
+	 * 
+	 * while this is optional, it is HIGHLY recommended
+     */
+    device_id_map_file?: string;
+
     [x: string]: unknown;
 }
+
+interface HeapExtras {}
 
 interface CustomTransformOptions {
     /**

@@ -21,7 +21,7 @@ const CONFIG = {
 	token: MP_TOKEN,
 	secret: MP_SECRET,
 	verbose: false,
-}
+};
 
 
 describe('do tests work?', () => {
@@ -34,7 +34,7 @@ describe('do tests work?', () => {
 describe('e2e', () => {
 
 	test('events', async () => {
-		const { success, failed } = await main({...CONFIG, type: "event", file: './testData/heap-events-ex.json'}, true);
+		const { success, failed } = await main({ ...CONFIG, type: "event", file: './testData/heap-events-ex.json' });
 		expect(success).toBe(10000);
 		expect(failed).toBe(0);
 
@@ -42,7 +42,7 @@ describe('e2e', () => {
 
 
 	test('events (custom user id)', async () => {
-		const { success, failed } = await main({...CONFIG, type: "event", custom_user_id: "event_id" , file: './testData/heap-events-ex.json'}, true);
+		const { success, failed } = await main({ ...CONFIG, type: "event", custom_user_id: "event_id", file: './testData/heap-events-ex.json' });
 		expect(success).toBe(10000);
 		expect(failed).toBe(0);
 
@@ -50,15 +50,24 @@ describe('e2e', () => {
 
 
 	test('users', async () => {
-		const { success, failed } = await main({...CONFIG, type: "user", file: './testData/heap-users-ex.json'}, true);
+		const { success, failed } = await main({ ...CONFIG, type: "user", file: './testData/heap-users-ex.json' });
 		expect(success).toBe(1500);
 		expect(failed).toBe(0);
 
 	}, timeout);
 
 	test('users (custom user id)', async () => {
-		const { success, failed } = await main({...CONFIG, type: "user", custom_user_id: "email", file: './testData/heap-users-ex.json'}, true);
+		const { success, failed } = await main({ ...CONFIG, type: "user", custom_user_id: "email", file: './testData/heap-users-ex.json' });
 		expect(success).toBe(1500);
+		expect(failed).toBe(0);
+
+	}, timeout);
+
+	test('events with device mapping', async () => {
+		const { success, failed } = await main({
+			...CONFIG, type: "event", file: './testData/ass-events.json', device_id_map_file: './testData/merged-users-mappings-test.json'
+		});
+		expect(success).toBe(12685);
 		expect(failed).toBe(0);
 
 	}, timeout);
