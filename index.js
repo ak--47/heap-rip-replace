@@ -60,7 +60,7 @@ async function main(config) {
 	l({ project, dir, file, stream, secret, token, strict, region, verbose, logs, type, groups, custom_user_id, aliases, tags, device_id_map_file, ...otherOpts });
 
 	// device_id hash map
-	let device_id_map = null;
+	let device_id_map;
 	if (device_id_map_file && type === 'event') device_id_map = await buildDeviceIdMap(device_id_map_file);
 	const transformOpts = { custom_user_id, device_id_map };
 
@@ -343,11 +343,17 @@ const heapMpPairs = [
 function heapEventsToMp(options) {
 	const { custom_user_id = "", device_id_map = new Map() } = options;
 	return function transform(heapEvent) {
-		const insert_id = md5(JSON.stringify(heapEvent));
+		let insert_id;
+		if (heapEvent.event_id) insert_id = heapEvent.event_id.toString();
+		else insert_id = md5(JSON.stringify(heapEvent));
+		
 
 		//some heap events have user_id, some have a weird tuple under id
 		const anon_id = heapEvent?.id?.split(",")?.[1]?.replace(")", ""); //ex: { "id": "(2008543124,4810060720600030)"} ... first # is project_id
-		const device_id = heapEvent.user_id.toString() || anon_id.toString();
+		let device_id;
+		if (heapEvent.user_id) device_id = heapEvent.user_id.toString();
+		else device_id = anon_id.toString();
+		
 		if (!device_id) return {};
 
 		// event name
@@ -382,20 +388,21 @@ function heapEventsToMp(options) {
 				delete mixpanelEvent.properties[heapMpPair[0]];
 			}
 		}
-
-		// if the event has an identity prop, it's a heap $identify event, so set $user_id too
-		if (heapEvent.identity && !custom_user_id) {
-			mixpanelEvent.event = "identity association";
-			const knownId = heapEvent.identity.toString();
-			mixpanelEvent.properties.$device_id = device_id;
-			mixpanelEvent.properties.$user_id = knownId;
-		}
-
-		// if we have a device_id map, look up the device_id in the map and use the mapped value for $user_id
-		else if (device_id_map && !custom_user_id) {
-			const knownId = device_id_map.get(device_id) || null;
-			if (knownId) {
+		if (!custom_user_id) {
+			// if the event has an identity prop, it's a heap $identify event, so set $user_id too
+			if (heapEvent.identity) {
+				mixpanelEvent.event = "identity association";
+				const knownId = heapEvent.identity.toString();
+				mixpanelEvent.properties.$device_id = device_id;
 				mixpanelEvent.properties.$user_id = knownId;
+			}
+
+			// if we have a device_id map, look up the device_id in the map and use the mapped value for $user_id
+			else if (device_id_map.size) {
+				const knownId = device_id_map.get(device_id) || null;
+				if (knownId) {
+					mixpanelEvent.properties.$user_id = knownId;
+				}
 			}
 		}
 
