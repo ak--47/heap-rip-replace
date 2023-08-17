@@ -458,12 +458,17 @@ function heapGroupToMp(heapEvent) {
 }
 
 async function buildDeviceIdMap(file) {
-	const data = /** @type {arrObj} */ (await u.load(file, true));
-	const hashmap = data.reduce((map, item) => {
-		map.set(item.id, item.distinct_id);
-		return map;
-	}, new Map());
-	return hashmap;
+	if (file) {
+		const data = /** @type {arrObj} */ (await u.load(file, true));
+		const hashmap = data.reduce((map, item) => {
+			map.set(item.id, item.distinct_id);
+			return map;
+		}, new Map());
+		return hashmap;
+	}
+	else {
+		throw new Error("No file provided for device_id_map");
+	}
 }
 
 function appendHeapUserIdsToMp(heapUser) {
