@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 /**
  * ok... so this is a bit of a hack... but it works
  * in heap, the events do not contain the user id... they only contain anonymous events 
@@ -21,12 +23,14 @@ const creds = {
 	secret : "your-secret",
 }
 
+if (creds.secret === "your-secret") throw new Error('you need to set your secret in this file')
+
 /** @type {import('mixpanel-import').Options} */
 const opts = {
 	recordType: 'peopleExport',
 	verbose: true,
 }
-// @ts-ignore
+
 await mp(creds, null, opts)
 
 

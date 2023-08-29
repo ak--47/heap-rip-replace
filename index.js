@@ -64,6 +64,19 @@ async function main(config) {
 	if (device_id_map_file && type === 'event') device_id_map = await buildDeviceIdMap(device_id_map_file);
 	const transformOpts = { custom_user_id, device_id_map };
 
+	// note: heap exports which contain nested objects are DOUBLE escaped;
+	// we therefore need to fix the string so it's parseable
+	function parseErrorHandler(err, record) {
+		let attemptedParse;
+		try {
+			attemptedParse = JSON.parse(record.replace(/\\\\/g, '\\'));
+		}
+		catch (e) {
+			attemptedParse = {};
+		}
+		return attemptedParse;
+	}
+
 
 	/** @type {import('mixpanel-import').Creds} */
 	const mpCreds = {
@@ -81,16 +94,18 @@ async function main(config) {
 		forceStream: true,
 		streamFormat: "jsonl",
 		workers: 25,
-		verbose: verbose,
+		verbose,
 		strict: false,
+		aliases,
+		tags,
+		parseErrorHandler,
 		...otherOpts
 	};
 
 	/** @type {import('mixpanel-import').Options} */
 	const optionsEvents = {
 		recordType: "event",
-		compress: true,
-		//@ts-ignore
+		compress: true,		
 		transformFunc: heapEventsToMp(transformOpts),
 		...commonOptions
 	};
@@ -100,7 +115,6 @@ async function main(config) {
 		...commonOptions,
 		recordType: "user",
 		fixData: true,
-		//@ts-ignore
 		transformFunc: heapUserToMp(transformOpts),
 
 	};
@@ -254,7 +268,21 @@ function cli() {
 			describe: 'path to a file mapping device_id user_id',
 			type: 'string'
 		})
-		.help().argv;
+		.options("tags", {
+			demandOption: false,
+			default: "{}",
+			describe: 'tags to add to each record; {"key": "value"}',
+			type: 'string'
+		})
+		.options("aliases", {
+			demandOption: false,
+			default: "{}",
+			describe: 'rename property keys on each record; {"oldPropKey": "newPropKey"}',
+			type: 'string'
+		})
+		.help()
+		.wrap(null)
+		.argv;
 	/** @type {import('./types.d.ts').Config} */
 	return args;
 }
@@ -281,7 +309,6 @@ const hero = String.raw`
 
 if (esMain(import.meta)) {
 	console.log(hero);
-	//@ts-ignore
 	const params = cli();
 	//@ts-ignore
 	main(params)
@@ -333,6 +360,8 @@ const heapMpPairs = [
 	["initial_country", "$country_code"],
 	["email", "$email"],
 	["_email", "$email"],
+	["firstName", "$first_name"],
+	["lastName", "$last_name"],
 	["last_modified", "$last_seen"],
 	["Name", "$name"],
 	["city", "$city"],
@@ -420,8 +449,7 @@ function heapEventsToMp(options) {
 function heapUserToMp(options) {
 	const { custom_user_id = "" } = options;
 	return function (heapUser) {
-		//todo... users might have multiple identities
-		//distinct_id
+		//todo... users might have multiple anon identities... for now we can't support that
 		let customId = null;
 		// use the custom user id if it exists on the event
 		if (custom_user_id && heapUser[custom_user_id]) {
@@ -484,6 +512,9 @@ async function buildDeviceIdMap(file) {
 		throw new Error("No file provided for device_id_map");
 	}
 }
+
+
+// UNUSED
 
 function appendHeapUserIdsToMp(heapUser) {
 	const anonId = heapUser.id.split(",")[1].replace(")", "");

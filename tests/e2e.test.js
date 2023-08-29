@@ -24,13 +24,6 @@ const CONFIG = {
 };
 
 
-describe('do tests work?', () => {
-	test('a = a', () => {
-		expect(true).toBe(true);
-	});
-});
-
-
 describe('e2e', () => {
 
 	test('events', async () => {
@@ -52,6 +45,16 @@ describe('e2e', () => {
 	test('users', async () => {
 		const { success, failed } = await main({ ...CONFIG, type: "user", file: './testData/heap-users-ex.json' });
 		expect(success).toBe(1500);
+		expect(failed).toBe(0);
+
+	}, timeout);
+
+	test('users (big)', async () => {
+		const res = await main({ ...CONFIG, type: "user", file: './testData/users-ass.json', tags: { "heap-user-parse": true } });
+		const { success, failed, total, empty } = res;
+		expect(success).toBe(1169);
+		expect(total).toBe(135530);
+		expect(empty).toBe(134361);
 		expect(failed).toBe(0);
 
 	}, timeout);
