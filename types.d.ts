@@ -5,6 +5,7 @@ export default async function main(config: Config): Promise<Results>;
 
 import { ImportResults, Options } from "mixpanel-import";
 import { Readable } from "stream";
+import { ReadStream } from "fs";
 
 interface Results {
     events: ImportResults;
@@ -27,7 +28,7 @@ interface Config extends Options {
     /**
      * a file stream of UNCOMPRESSED amplitude event json
      */
-    stream?: Readable;
+    stream?: ReadStream;
     /**
      * mixpanel secret
      */
@@ -86,10 +87,10 @@ interface Config extends Options {
      *
      *
      * if provided, this will be used to map $device_id to $user_id
-	 * 
-	 * for help generating this file, see: get-device-user-map.js
-	 * 
-	 * while this is optional, it is HIGHLY recommended
+     *
+     * for help generating this file, see: get-device-user-map.js
+     *
+     * while this is optional, it is HIGHLY recommended
      */
     device_id_map_file?: string;
 

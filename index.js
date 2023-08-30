@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 
 // @ts-check
+// @ts-ignore
 import u from "ak-tools";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
@@ -9,8 +10,9 @@ import mp from "mixpanel-import";
 import md5 from "md5";
 import path from "path";
 import esMain from "es-main";
-import yargs from "yargs";
+import { cli, hero } from "./cli.js";
 import { lstatSync } from "fs";
+import get_id_map from "./get-device-user-map.js";
 const fileExt = ["json", "jsonl", "ndjson"];
 
 /**
@@ -66,6 +68,7 @@ async function main(config) {
 
 	// note: heap exports which contain nested objects are DOUBLE escaped;
 	// we therefore need to fix the string so it's parseable
+	// @ts-ignore
 	function parseErrorHandler(err, record) {
 		let attemptedParse;
 		try {
@@ -105,7 +108,7 @@ async function main(config) {
 	/** @type {import('mixpanel-import').Options} */
 	const optionsEvents = {
 		recordType: "event",
-		compress: true,		
+		compress: true,
 		transformFunc: heapEventsToMp(transformOpts),
 		...commonOptions
 	};
@@ -142,6 +145,7 @@ async function main(config) {
 			break;
 		default:
 			throw `unknown type: ${type}`;
+			// @ts-ignore
 			break;
 	}
 
@@ -168,7 +172,7 @@ async function main(config) {
 		}
 	}
 
-	// @ts-ignore
+
 	const results = await mp(mpCreds, data, options);
 
 	if (logs) {
@@ -180,112 +184,7 @@ async function main(config) {
 	return results;
 }
 
-/*
-----
-CLI
-----
-*/
 
-function cli() {
-	const args = yargs(process.argv.splice(2))
-		.scriptName("")
-		.command("$0", "usage:\nnpx heap-to-mp --dir ./data --token bar --secret qux --project foo ", () => { })
-		.option("dir", {
-			alias: "file",
-			demandOption: true,
-			describe: "path to (or file of) UNCOMPRESSED amplitude event json",
-			type: "string"
-		})
-		.option("token", {
-			demandOption: true,
-			describe: "mp token",
-			type: "string"
-		})
-		.option("secret", {
-			demandOption: true,
-			describe: "mp secret",
-			type: "string"
-		})
-		.option("project", {
-			demandOption: true,
-			describe: "mp project id",
-			type: "number"
-		})
-		.option("region", {
-			demandOption: false,
-			default: "US",
-			describe: "US or EU",
-			type: "string"
-		})
-		.option("strict", {
-			demandOption: false,
-			default: false,
-			describe: "baz",
-			type: "boolean"
-		})
-		.option("custom_user_id", {
-			demandOption: false,
-			default: "",
-			describe: "a custom key to use for $user_id instead of heap default (user_id)",
-			type: "string"
-		})
-		.option("type", {
-			demandOption: false,
-			default: 'event',
-			describe: "type of data to import: event user or group",
-			type: "string"
-		})
-		.option("verbose", {
-			demandOption: false,
-			default: true,
-			describe: "log messages",
-			type: "boolean"
-		})
-		.option("logs", {
-			demandOption: false,
-			default: true,
-			describe: "write logfile",
-			type: "boolean"
-		})
-		.options("epoch-start", {
-			demandOption: false,
-			alias: 'epochStart',
-			default: 0,
-			describe: 'don\'t import data before this timestamp (UNIX EPOCH)',
-			type: 'number'
-		})
-		.options("epoch-end", {
-			demandOption: false,
-			default: 9991427224,
-			alias: 'epochEnd',
-			describe: 'don\'t import data after this timestamp (UNIX EPOCH)',
-			type: 'number'
-		})
-		.options("device_id_map", {
-			demandOption: false,
-			alias: 'id_map',
-			default: '',
-			describe: 'path to a file mapping device_id user_id',
-			type: 'string'
-		})
-		.options("tags", {
-			demandOption: false,
-			default: "{}",
-			describe: 'tags to add to each record; {"key": "value"}',
-			type: 'string'
-		})
-		.options("aliases", {
-			demandOption: false,
-			default: "{}",
-			describe: 'rename property keys on each record; {"oldPropKey": "newPropKey"}',
-			type: 'string'
-		})
-		.help()
-		.wrap(null)
-		.argv;
-	/** @type {import('./types.d.ts').Config} */
-	return args;
-}
 
 /*
 ----
@@ -294,36 +193,42 @@ EXPORTS
 */
 export default main;
 
-const hero = String.raw`
-
-██╗  ██╗███████╗ █████╗ ██████╗       ██╗██╗      ███╗   ███╗██████╗ 
-██║  ██║██╔════╝██╔══██╗██╔══██╗     ██╔╝╚██╗     ████╗ ████║██╔══██╗
-███████║█████╗  ███████║██████╔╝    ██╔╝  ╚██╗    ██╔████╔██║██████╔╝
-██╔══██║██╔══╝  ██╔══██║██╔═══╝     ╚██╗  ██╔╝    ██║╚██╔╝██║██╔═══╝ 
-██║  ██║███████╗██║  ██║██║          ╚██╗██╔╝     ██║ ╚═╝ ██║██║     
-╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝           ╚═╝╚═╝      ╚═╝     ╚═╝╚═╝     
-                                                                     
-	r&r by AK
-`;
-
 
 if (esMain(import.meta)) {
 	console.log(hero);
 	const params = cli();
-	//@ts-ignore
-	main(params)
-		.then(() => {
-			console.log(`\n\nhooray! all done!\n\n`);
-			process.exit(0);
-		})
-		.catch(e => {
-			console.log(`\n\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n@\n\n${e.stack}\n\n`);
-			process.exit(1);
-		})
-		.finally(() => {
-			console.log("\n\nhave a great day!\n\n");
-			process.exit(0);
-		});
+	// @ts-ignore
+	if (params.get_device_map) {
+		// @ts-ignore
+		get_id_map(params.secret)
+			.then(() => {
+				process.exit(0);
+			})
+			.catch(e => {
+				console.log(`\n\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n@\n\n${e.stack}\n\n`);
+				process.exit(1);
+			})
+			.finally(() => {
+				process.exit(0);
+			});
+	}
+
+	else {
+		//@ts-ignore
+		main(params)
+			.then(() => {
+				console.log(`\n\nhooray! all done!\n\n`);
+				process.exit(0);
+			})
+			.catch(e => {
+				console.log(`\n\nuh oh! something didn't work...\nthe error message is:\n\n\t${e.message}\n\n@\n\n${e.stack}\n\n`);
+				process.exit(1);
+			})
+			.finally(() => {
+				console.log("\n\nhave a great day!\n\n");
+				process.exit(0);
+			});
+	}
 }
 
 
@@ -375,14 +280,14 @@ function heapEventsToMp(options) {
 		let insert_id;
 		if (heapEvent.event_id) insert_id = heapEvent.event_id.toString();
 		else insert_id = md5(JSON.stringify(heapEvent));
-		
+
 
 		//some heap events have user_id, some have a weird tuple under id
 		const anon_id = heapEvent?.id?.split(",")?.[1]?.replace(")", ""); //ex: { "id": "(2008543124,4810060720600030)"} ... first # is project_id
 		let device_id;
 		if (heapEvent.user_id) device_id = heapEvent.user_id.toString();
 		else device_id = anon_id.toString();
-		
+
 		if (!device_id) return {};
 
 		// event name
@@ -494,6 +399,7 @@ function heapUserToMp(options) {
 	};
 }
 
+// @ts-ignore
 function heapGroupToMp(heapEvent) {
 	//todo
 
@@ -516,6 +422,7 @@ async function buildDeviceIdMap(file) {
 
 // UNUSED
 
+// @ts-ignore
 function appendHeapUserIdsToMp(heapUser) {
 	const anonId = heapUser.id.split(",")[1].replace(")", "");
 	const userId = heapUser.identity;
@@ -528,6 +435,7 @@ function appendHeapUserIdsToMp(heapUser) {
 	return mixpanelProfile;
 }
 
+// @ts-ignore
 function heapMpIdentityResolution(mpProfile) {
 	//todo need a way to explode multiple events here
 	if (mpProfile.$properties.anon_heap_ids) {

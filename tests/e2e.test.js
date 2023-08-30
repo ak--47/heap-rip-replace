@@ -6,9 +6,11 @@
 import main from "../index.js";
 import dotenv from 'dotenv';
 import { execSync } from "child_process";
+import u from 'ak-tools';
+import path from 'path';
 dotenv.config();
 
-const timeout = 300000;
+const timeout = 60000;
 
 const MP_PROJECT = process.env.MP_PROJECT;
 const MP_TOKEN = process.env.MP_TOKEN;
@@ -75,62 +77,30 @@ describe('e2e', () => {
 
 	}, timeout);
 
+	test('CLI', async () => {
+		const { dir = './testData/heap-events-ex.json',
+			token,
+			secret,
+			project,
+			strict,
+			region,
+			verbose } = CONFIG;
+		const run = execSync(`node ./index.js --dir ${dir} --token ${token} --secret ${secret} --project ${project} --region ${region} --strict ${strict} --type event --verbose ${verbose}`);
+		expect(run.toString().trim().includes('hooray! all done!')).toBe(true);
+	}, timeout);
 
-	// test('works as module', async () => {
-	// 	console.log('MODULE TEST');
-	// 	const { events, users, groups } = await main(CONFIG);
-	// 	expect(events.success).toBe(8245);
-	// 	expect(events.failed).toBe(0);
-	// 	expect(users.success).toBe(5168);
-	// 	expect(users.failed).toBe(0);
-	// 	expect(JSON.stringify(groups)).toBe('{}');
+	test('CLI (device map)', async () => {
+		execSync(`node ./index.js --get_map --secret ${CONFIG.secret}`);
+		const file = path.resolve(`./user-device-mappings.json`);
+		const result = await u.load(file, true);
+		expect(result.length).toBeGreaterThan(10000);
+		expect(result[0]).toHaveProperty('distinct_id');
+		expect(result[0]).toHaveProperty('id');
+		await u.rm(file);
 
-	// }, timeout);
-
-	// test('works as CLI', async () => {
-	// 	console.log('CLI TEST');
-	// 	const { dir,
-	// 		token,
-	// 		secret,
-	// 		project,
-	// 		strict,
-	// 		region,
-	// 		events,
-	// 		users,
-	// 		groups,
-	// 		verbose } = CONFIG;
-	// 	const run = execSync(`node ./index.js --dir ${dir} --token ${token} --secret ${secret} --project ${project} --region ${region} --strict ${strict} --events ${events} --users ${users} --grouos ${groups} --verbose ${verbose}`);
-	// 	expect(run.toString().trim().includes('hooray! all done!')).toBe(true);
-	// }, timeout);
-
-	// //todo test custom id resolution
+	}, timeout);
 
 
-	// test('works with individual files', async () => {
-	// 	console.log('INDIVIDUAL FILES TEST');
-	// 	const { events, users, groups } = await main({
-	// 		...CONFIG,
-	// 		file: './data/sample/'
-	// 	});
-	// 	expect(events.success).toBe(8245);
-	// 	expect(events.failed).toBe(0);
-	// 	expect(users.success).toBe(5168);
-	// 	expect(users.failed).toBe(0);
-	// 	expect(JSON.stringify(groups)).toBe('{}');
-	// }, timeout);
-
-	// test('works with streams', async () => {
-	// 	console.log('STREAM TEST');
-	// 	const { events, users, groups } = await main({
-	// 		...CONFIG,
-	// 		stream: createReadStream('./data/sample/pintara/2023-04-10_12#0.json')
-	// 	});
-	// 	expect(events.success).toBe(8245);
-	// 	expect(events.failed).toBe(0);
-	// 	expect(users.success).toBe(5168);
-	// 	expect(users.failed).toBe(0);
-	// 	expect(JSON.stringify(groups)).toBe('{}');
-	// }, timeout);
 });
 
 

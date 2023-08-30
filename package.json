@@ -5,9 +5,10 @@
 	"main": "index.js",
 	"scripts": {
 		"scratch": "nodemon --inspect -i ./tmp -i ./testData scratch.js",
-		"prune": "rm -rf ./tmp/*",
+		"prune": "rm -rf ./tmp/* && rm -rf ./logs/*",
 		"post": "npm publish",
-		"test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
+		"test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js",
+		"update": "npm i mixpanel-import@latest"
 	},
 	"bin": {
 		"heap-to-mp": "./index.js"
@@ -27,7 +28,7 @@
 		"dayjs": "^1.11.7",
 		"es-main": "^1.2.0",
 		"md5": "^2.3.0",
-		"mixpanel-import": "^2.5.0",
+		"mixpanel-import": "^2.5.12",
 		"yargs": "^17.7.2"
 	},
 	"devDependencies": {

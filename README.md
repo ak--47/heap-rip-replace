@@ -7,7 +7,7 @@
 
 ## usage:
 ```bash
-npx heap-to-mp --dir ./data --type event --token bar --secret qux --project 123
+npx heap-to-mp --dir ./data --type event --token your-token --secret your-secret --project 123
 ```
 
 ## help / options
@@ -18,24 +18,18 @@ npx heap-to-mp --help
 ## e2e
 ```bash
 # first import user profiles
-npx heap-to-mp --dir ./heap-user-export/ --type user --token bar --secret qux --project 123
+npx heap-to-mp --dir ./heap-user-export/ --type user --token your-token --secret your-secret --project 123
 ```
 
 ```bash
-# clone the repo
-git clone https://github.com/ak--47/heap-to-mp.git
-npm install
-
-# plug your project secret into get-device-user-map.js
-nano get-device-user-map.js
-
-# then run get-device-user-map.js
-node get-device-user-map.js # this will EXPORT profiles and save a device_id mapping to disk
+# then EXPORT the profiles you just imported 
+# and build a device_id mapping, which is saved to disk
+npx heap-to-mp --get_map --secret your-secret
 ```
 
 ```bash
 # finally import events, using the device mappings
-npx heap-to-mp --device_id_map ./user-device-mappings.json --dir ./heap-event-export --type event --token bar --secret qux --project 123
+npx heap-to-mp --device_id_map ./user-device-mappings.json --dir ./heap-event-export/ --type event --token your-token --secret your-secret --project 123
 ```
 
 for the full reasoning of why this workflow is necessary, see comments in [get-device-user-map.js](https://github.com/ak--47/heap-to-mp/blob/main/get-device-user-map.js)
