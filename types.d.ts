@@ -1,22 +1,18 @@
 /**
  * a module to import amplitude data into mixpanel
  */
-export default async function main(config: Config): Promise<Results>;
+export default function main(config: Config): Promise<Results>;
 
 import { ImportResults, Options } from "mixpanel-import";
 import { Readable } from "stream";
 import { ReadStream } from "fs";
 
-interface Results {
-    events: ImportResults;
-    users: ImportResults;
-    groups: {};
-}
+export interface Results extends ImportResults {}
 
 /**
  * an object to store configuration params
  */
-interface Config extends Options {
+interface Config extends Options, CustomTransformOptions {
     /**
      * a directory containing UNCOMPRESSED amplitude event json
      */
@@ -78,6 +74,21 @@ interface Config extends Options {
      * add arbitrary k:v pairs to records
      */
     tags?: Options["tags"];
+}
+
+interface HeapExtras {}
+
+interface CustomTransformOptions {
+    /**
+     * a custom key to use for $user_id instead of amplitude default (user_id)
+     * see //? https://www.docs.developers.amplitude.com/analytics/apis/export-api/
+     */
+    custom_user_id?: string;
+    /**
+     * a custom key to use for $user_id instead of amplitude default (user_id)
+     * see //? https://www.docs.developers.amplitude.com/analytics/apis/export-api/
+     */
+    custom_group_id?: string;
     /**
      * a local path to a file containing data of the form:
      *
@@ -93,16 +104,5 @@ interface Config extends Options {
      * while this is optional, it is HIGHLY recommended
      */
     device_id_map_file?: string;
-
-    [x: string]: unknown;
-}
-
-interface HeapExtras {}
-
-interface CustomTransformOptions {
-    /**
-     * a custom key to use for $user_id instead of amplitude default (user_id)
-     * see //? https://www.docs.developers.amplitude.com/analytics/apis/export-api/
-     */
-    custom_user_id?: string;
+	device_id_map?: any; // but really Map<string, string>
 }

@@ -25,6 +25,15 @@ const fileExt = ["json", "jsonl", "ndjson"];
  * An array of objects with string keys.
  */
 
+/**
+ * @typedef {import('./types.d.ts').Config} Config
+ */
+
+/**
+ * @typedef {import('./types.d.ts').CustomTransformOptions} CustomTransformOptions
+ */
+
+
 
 /*
 ----
@@ -34,7 +43,7 @@ MAIN
 
 /**
  * takes a heap export and imports it into mixpanel
- * @param  {import('./types.js').Config} config
+ * @param  {Config} config
  */
 async function main(config) {
 	const {
@@ -48,7 +57,6 @@ async function main(config) {
 		verbose = false,
 		logs = false,
 		type = "event",
-		groups = false,
 		custom_user_id = "",
 		aliases = {},
 		tags = {},
@@ -59,7 +67,24 @@ async function main(config) {
 
 	const l = log(verbose);
 	l("start!\n\nsettings:\n");
-	l({ project, dir, file, stream, secret, token, strict, region, verbose, logs, type, groups, custom_user_id, aliases, tags, device_id_map_file, ...otherOpts });
+	l({
+		project,
+		dir,
+		file,
+		stream,
+		secret,
+		token,
+		strict,
+		region,
+		verbose,
+		logs,
+		type,
+		custom_user_id,
+		aliases,
+		tags,
+		device_id_map_file,
+		...otherOpts
+	});
 
 	// device_id hash map
 	let device_id_map;
@@ -239,7 +264,7 @@ TRANSFORMS
 */
 
 
-const heapMpPairs = [
+export const heapMpPairs = [
 	//heap default to mp default props
 	// ? https://help.mixpanel.com/hc/en-us/articles/115004613766-Default-Properties-Collected-by-Mixpanel
 	["joindate", "$created"],
@@ -274,7 +299,11 @@ const heapMpPairs = [
 	["ip", "$ip"]
 ];
 
-function heapEventsToMp(options) {
+/**
+ * returns a function that transforms a heap event into a mixpanel event
+ * @param  {CustomTransformOptions} options
+ */
+ function heapEventsToMp(options) {
 	const { custom_user_id = "", device_id_map = new Map() } = options;
 	return function transform(heapEvent) {
 		let insert_id;
@@ -351,6 +380,10 @@ function heapEventsToMp(options) {
 	};
 }
 
+/**
+ * returns a function that transforms a heap user into a mixpanel profile
+ * @param  {CustomTransformOptions} options
+ */ 
 function heapUserToMp(options) {
 	const { custom_user_id = "" } = options;
 	return function (heapUser) {
@@ -399,9 +432,14 @@ function heapUserToMp(options) {
 	};
 }
 
-// @ts-ignore
-function heapGroupToMp(heapEvent) {
-	//todo
+
+/**
+ * returns a function that transforms a heap group into a mixpanel group
+ * @param  {CustomTransformOptions & Config} options
+ */
+export function heapGroupToMp(options) {
+	const { custom_group_id = "", group_keys = [] } = options;
+	return function (heapGroup) {};
 
 }
 
